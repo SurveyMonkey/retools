@@ -190,9 +190,12 @@ class Job(object):
                 try:
                     mod = sys.modules[mod_name]
                 except KeyError:
-                    __import__(mod_name)
-                    mod = sys.modules[mod_name]
-                funcs.append(getattr(mod, func_name))
+                    try:
+                        __import__(mod_name)
+                    except ImportError:
+                        continue
+                mod = sys.modules[mod_name]
+                funcs.append(getattr(mod, func_name))                    
             events[k] = funcs
         return events
 
@@ -225,7 +228,7 @@ class Job(object):
         pipeline.rpush(full_queue_name, json.dumps(job_dct))
         pipeline.sadd('retools:queues', queue_name)
         pipeline.execute()
-        return job_id
+        return self.job_id
 
     def run_event(self, event, **kwargs):
         for event_func in self.events.get(event, []):
